@@ -53,7 +53,27 @@ enum class CameraDirectIDs {
 	Target
 };
 
+static const void* const sub_5C04B0_ptr = (void*)0x5C04B0;
+static inline void sub_5C04B0(int a1)
+{
+	__asm
+	{
+		mov eax, [a1]
+		call sub_5C04B0_ptr
+	}
+}
+
 DataPointer(_camcontwk, CameraTask, 0x3B2C660);
 typedef void(__cdecl* CameraFuncPtr)(_OBJ_CAMERAPARAM*);
 FunctionPointer(void, SetCameraEvent, (CameraFuncPtr func, CameraAdjustsIDs adjust, CameraDirectIDs direct), 0x437D20);
 FunctionPointer(void, SetCameraMode_, (int mode), 0x4348F0);
+VoidFunc(sub_5C0300, 0x5C0300);
+TaskFunc(sub_5C03B0, 0x5C03B0);
+
+DataPointer(NJS_ACTION, action_s_s0059_sonic, 0x3C84EF4);
+DataPointer(NJS_ACTION, action_m_m0001_miles, 0x3C848C0);
+DataPointer(NJS_ACTION, action_k_k0039_knuckles, 0x3C84980);
+DataPointer(NJS_ACTION, action_k_k0013_knuckles, 0x3C85198);
+DataPointer(NJS_ACTION, action_a_a0826_amy, 0x3C84AF0);
+//EV_SetAction(player, BIG_ACTIONS[23], &BIG_TEXLIST, 1.4f, 1, 0);
+//EV_SetAction(player, E102_ACTIONS[2], &E102_TEXLIST, 0.60000002f, 1, 16);

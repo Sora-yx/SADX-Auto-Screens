@@ -4,26 +4,13 @@
 #include <ShellApi.h>
 
 static FunctionHook<void> LoadLevelObject_t(LoadLevelObject);
-static FunctionHook<void, taskwk*> SetPlayerInitialPosition_t(SetPlayerInitialPosition);
-static uint8_t count = 0;
-
-static bool camHack = false;
-
-struct Photos
-{
-	uint8_t lvl;
-	uint8_t act;
-	NJS_POINT3 pos;
-	int rotY;
-	NJS_POINT3 camPos;
-	Angle3 camAng;
-	GameModes gameMode;
-};
+uint8_t count = 0;
+bool camHack = false;
 
 static Photos screenArray[]
 {
 	{ LevelIDs_EmeraldCoast, 0, {-627, 116, 1186}, 16384, {-636, 123, 1196}, {64819, 58146, 0}, GameModes_Trial  },
-	{ LevelIDs_EmeraldCoast, 0, {4298, 25, 375}, 19006, {0}, {0}, GameModes_Trial },
+	{ LevelIDs_EmeraldCoast, 0, { 4298, 25, 375}, 19006, {0}, {0}, GameModes_Trial },
 	{ LevelIDs_EmeraldCoast, 1, {3292, 70, -2711}, {2444}, {3305, 78.11, -2699}, {64531, 7966, 0}, GameModes_Trial  },
 	{ LevelIDs_WindyValley, 2, {5801, -10744, -809}, {12548}, {5799.0f, -10747.0f, -793.08f}, {64360, 64497, 0}, GameModes_Trial  },
 	{ LevelIDs_Casinopolis, 0,  {-373, 137, 297}, {0x8000}, {-382, 145, 308}, {63948, 58808, 0x0}, GameModes_Trial  }, //pirate ship
@@ -48,54 +35,98 @@ static Photos screenArray[]
 	{ LevelIDs_MRGarden, 0, {-61, 46, 10}, {21313}, {-75, 53, 24}, {64708, 56418, 0}, GameModes_Adventure_Field },
 };
 
-static Photos destArray[max] = { NULL };
-
+Photos destArray[max] = { NULL };
 std::vector<uint8_t> levelDuplicate;
 
-void SetNewCamPos(NJS_POINT3 pos)
+static int prevRng = -1;
+static char rng = 0;
+static int timerWait = 120;
+static NJS_ACTION actionS_0059Copy;
+
+void SetCharacterAnim()
 {
-	Camera_Data1->Position = pos;
-}
-
-void SetNewCamAng(Angle3 pos)
-{
-	Camera_Data1->Rotation.x = pos.x;
-	Camera_Data1->Rotation.y = pos.y;
-	Camera_Data1->Rotation.z = pos.z;
-}
-
-void SetCamForScreenshot() {
-
-	if (destArray[count].camPos.x == 0 && destArray[count].camPos.y == 0 && destArray[count].camPos.z == 0)
+	if (!playertp[0] || (playertwp[0]->flag & 3) == 0)
 	{
-		camHack = false;
+		timerWait = 200;
 		return;
 	}
 
-
-	SetNewCamPos(destArray[count].camPos);
-	SetNewCamAng(destArray[count].camAng);
-}
-
-void CamOnFrames()
-{
-	if (camHack)
+	do
 	{
-		WriteData<1>((int*)0x437760, 0x75); //stop normal camera
-		CameraType[0] = 0;
-		CameraType[1] = 0;
-		CameraType[2] = 0;
-		WriteData((int*)0x3B2CAE3, 0x462E9002);
-		WriteData((int*)0x3B2CAE7, 0x467D8000);
-		WriteData<1>((int*)0x3B2CBA8, 4); // camera_flags
+		rng = rand() % 3;
+	} while (rng == prevRng);
+
+	EV_LookFree(playertp[0]);
+
+	if (!rng)
+	{
+		timerWait = 120;
+		switch (CurrentCharacter)
+		{
+		case Characters_Sonic:
+
+			actionS_0059Copy.motion = action_s_s0059_sonic.motion;
+
+			if (MetalSonicFlag)
+			{
+				actionS_0059Copy.object = SONIC_OBJECTS[58];
+				EV_SetAction(playertp[0], &actionS_0059Copy, &METALSONIC_TEXLIST, 0.5f, 1, 3);
+			}
+			else
+			{
+				if (!useSS)
+					EV_SetAction(playertp[0], &action_s_s0059_sonic, &SONIC_TEXLIST, 0.5f, 1, 16);
+			}
+			destArray[count].camPos.y -= 2.0f;
+			playertwp[0]->ang.y += 0x2000;
+			break;
+		case Characters_Tails:
+			EV_SetAction(playertp[0], &action_m_m0001_miles, &MILES_TEXLIST, 0.5f, 1, 16);
+			break;
+		case Characters_Knuckles:
+			EV_SetFace(playertp[0], "VVVVVVVVVVVVVVVVVV");
+			EV_SetAction(playertp[0], &action_k_k0039_knuckles, &KNUCKLES_TEXLIST, 0.5f, 1, 16);
+			destArray[count].camPos.y -= 2.0f;
+			playertwp[0]->ang.y += 0x500;
+			break;
+		case Characters_Amy:
+			AmyForEventHammerScaleIm(0, 0.8f);
+			EV_SetAction(playertp[0], &action_a_a0826_amy, &AMY_TEXLIST, 0.5f, 1, 16);
+			playertwp[0]->ang.y += 0x4900;
+			break;
+		case Characters_Big:
+			EV_SetAction(playertp[0], BIG_ACTIONS[23], &BIG_TEXLIST, 1.4f, 1, 0);
+			break;
+		case Characters_Gamma:
+			EV_SetAction(playertp[0], E102_ACTIONS[2], &E102_TEXLIST, 0.60000002f, 1, 16);
+			break;
+		}
+	}
+	else if (rng == 1)
+	{
+		timerWait = CurrentCharacter == Characters_Amy ? 110 : 130;
+		if (CurrentCharacter == Characters_Big)
+		{
+			playerpwp[0]->mj.reqaction = 1;
+		}
+		else if (CurrentCharacter == Characters_Gamma)
+		{
+			playerpwp[0]->mj.reqaction = 73;
+		}
+		else
+		{
+			playerpwp[0]->mj.reqaction = 4;
+		}
 	}
 	else
 	{
-		WriteData<1>((int*)0x437760, 0x74); // Enable normal cameras
-		WriteData<1>((int*)0x436308, 0x8F); // Enable first person cam
+		timerWait = 180;
+		SetTailsRaceVictory();
+		ForcePlayerAction(0, 19);
 	}
-}
 
+	prevRng = rng;
+}
 
 bool saveBitmap(LPCSTR filename, HBITMAP bmp, HPALETTE pal)
 {
@@ -179,13 +210,11 @@ bool screenCapturePart(int x, int y, int w, int h, LPCSTR fname)
 	return false;
 }
 
+void SetCam();
+
 void SetScreenShot(task* tp)
 {
-	if (camera_twp)
-	{
-		CamOnFrames();
-		SetCamForScreenshot();
-	}
+	SetCam();
 
 	//if we aren't in game or if a cutscene is running, abort
 	if (GameState != 15 || EV_MainThread_ptr)
@@ -195,22 +224,28 @@ void SetScreenShot(task* tp)
 	std::string folder = modpath + "\\screenshots";
 	std::string path = folder + "\\" + std::to_string(count) + ".jpg";
 	int crop = IsWindowed ? 15 : 0;
+	bool camDead = destArray[count].camPos.x == 0 && destArray[count].camPos.y == 0 && destArray[count].camPos.z == 0;
 
 	switch (twp->mode)
 	{
 	case 0:
-		camHack = true;
-
-		ForcePlayerAction(0, useSS ? 46 : 24);
-		playerpwp[0]->item |= Powerups_Invincibility;
-
-		GameMode = destArray[count].gameMode;
 		DisablePause();
 		DisableControl();
+		GameMode = destArray[count].gameMode;
+		EV_ClrFace(playertp[0]);
+		ForcePlayerAction(0, useSS ? 46 : 24);
+		playerpwp[0]->item |= Powerups_Invincibility;
+	
+		if (!camDead)
+		{
+			camHack = true;
+			SetCharacterAnim();
+		}
+			
 		twp->mode++;
 		break;
 	case 1:
-		if (++twp->wtimer == 120) //wait one second
+		if (++twp->wtimer == timerWait) //wait one second
 		{
 			twp->wtimer = 0;
 			twp->mode++;
@@ -234,7 +269,7 @@ void SetScreenShot(task* tp)
 		}
 		break;
 	case 3:
-		if (++twp->wtimer == 30)
+		if (++twp->wtimer == 20)
 		{
 			count++;
 
@@ -267,6 +302,15 @@ void LoadLevelObject_r()
 	CreateElementalTask(2, 2, SetScreenShot);
 }
 
+void ProcessQuickBoot()
+{
+	//force the game to boot on a level
+	WriteData(reinterpret_cast<GameModes*>(0x0040C10C), (GameModes)4);
+	//add support for the code "skip intro" (force level boot instead of title screen, we will close the game after the screenshots so it doesn't really matter)
+	WriteJump((void*)0x40C439, (void*)0x40C1E7);
+	CurrentCharacter = character;
+}
+
 void GenerateRandomLevelsLocation()
 {
 	//fill the destination array
@@ -294,72 +338,21 @@ void GenerateRandomLevelsLocation()
 			CurrentLevel = destArray[i].lvl;
 			CurrentAct = destArray[i].act;
 		}
+
+
+		if (CurrentCharacter >= Characters_Gamma)
+		{
+			destArray[i].camPos.x += 5.0f;
+			destArray[i].camPos.y += 8.0f;
+			destArray[i].camPos.z += 10.0f;
+		}
 	}
-}
-
-void HideHud_r()
-{
-	WriteData<1>((int*)0x425F90, 0xC3);
-	WriteData<1>((int*)0x0427F50, 0xC3);
-	WriteData<1>((int*)0x0457120, 0xC3);
-	WriteData<1>((int*)0x04B3830, 0xC3);
-	WriteData<1>((int*)0x0628330, 0xC3);
-	WriteData<1>((int*)0x04DB5E0, 0xC3);
-	WriteData<1>((int*)0x0470546, 0xEB);
-	WriteData<1>((int*)0x04706D6, 0xEB);
-	WriteData<1>((int*)0x046FB00, 0xC3);
-	WriteData<1>((int*)0x046B330, 0xC3);
-	WriteData<1>((int*)0x04C0DC0, 0xC3);
-	WriteData<1>((int*)0x0457D30, 0xC3);
-	WriteData<1>((int*)0x071B210, 0xC3);
-}
-
-
-static void SetPlayerInitialPosition_r(taskwk* twp)
-{
-	if (!CheckRestartLevel() && CurrentLevel == destArray[count].lvl && CurrentAct == destArray[count].act)
-	{
-		twp->pos = destArray[count].pos;
-		twp->ang.y = destArray[count].rotY;
-	}
-	else
-	{
-		SetPlayerInitialPosition_t.Original(twp);
-	}
-}
-
-
-void SetPatches()
-{
-	HideHud_r();
-	
-	WriteData<1>((int*)0x4751B0, 0xC3); //remove death zone check (fix knux boundary)
-	WriteData<5>(reinterpret_cast<void*>(0x00415007), static_cast<uint8_t>(0x90u)); //Prevents CurrentCharacter from being overwritten at initialization.
-	WriteData<1>((int*)0x4AD140, 0xC3); //remove kiki
-	WriteData<1>((int*)0x47D940, 0xC3); //remove Sonk AI
-
-	WriteData<1>((int*)0x413B20, 0xC3);
-	WriteData<5>(reinterpret_cast<void*>(0x5C0D67), static_cast<uint8_t>(0x90u)); //remove hardcoded cas start pos
-	WriteData((uint8_t*)0x715350, static_cast<uint8_t>(0xC3u)); //remove chao world start pos
-	WriteData<9>((int*)0x5C0D6C, 0x90);	//remove casino rot 
-	WriteData<9>((int*)0x5C0DA0, 0x90);
-
-	SetPlayerInitialPosition_t.Hook(SetPlayerInitialPosition_r);
-}
-
-void ProcessQuickBoot()
-{
-	//force the game to boot on a level
-	WriteData(reinterpret_cast<GameModes*>(0x0040C10C), (GameModes)4);
-	//add support for the code "skip intro" (force level boot instead of title screen, we will close the game after the screenshots so it doesn't really matter)
-	WriteJump((void*)0x40C439, (void*)0x40C1E7);
-	CurrentCharacter = character;
 }
 
 void initScreenshots()
 {
+	ProcessQuickBoot(); //start the game and make it chain all levels generated
 	GenerateRandomLevelsLocation();
 	SetPatches();
-	ProcessQuickBoot(); //start the game and make it chain all levels generated
 	LoadLevelObject_t.Hook(LoadLevelObject_r); //load a custom task that will generate our screenshot 
 }
