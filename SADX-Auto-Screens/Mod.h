@@ -29,3 +29,5 @@ extern std::string modpath;
 void initScreenshots();
 void ProcessQuickBoot();
 void SetPatches();
+
+void SetCam();

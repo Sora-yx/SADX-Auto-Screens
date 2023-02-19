@@ -128,65 +128,11 @@ void SetCharacterAnim()
 	prevRng = rng;
 }
 
-bool saveBitmap(LPCSTR filename, HBITMAP bmp, HPALETTE pal)
-{
-	bool result = false;
-	PICTDESC pd;
-
-	pd.cbSizeofstruct = sizeof(PICTDESC);
-	pd.picType = PICTYPE_BITMAP;
-	pd.bmp.hbitmap = bmp;
-	pd.bmp.hpal = pal;
-
-	LPPICTURE picture;
-	HRESULT res = OleCreatePictureIndirect(&pd, IID_IPicture, false,
-		reinterpret_cast<void**>(&picture));
-
-	if (!SUCCEEDED(res))
-		return false;
-
-	LPSTREAM stream;
-	res = CreateStreamOnHGlobal(0, true, &stream);
-
-	if (!SUCCEEDED(res))
-	{
-		picture->Release();
-		return false;
-	}
-
-	LONG bytes_streamed;
-	res = picture->SaveAsFile(stream, true, &bytes_streamed);
-
-	HANDLE file = CreateFileA(filename, GENERIC_WRITE, FILE_SHARE_READ, 0,
-		CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-
-	if (!SUCCEEDED(res) || !file)
-	{
-		stream->Release();
-		picture->Release();
-		return false;
-	}
-
-	HGLOBAL mem = 0;
-	GetHGlobalFromStream(stream, &mem);
-	LPVOID data = GlobalLock(mem);
-
-	DWORD bytes_written;
-
-	result = !!WriteFile(file, data, bytes_streamed, &bytes_written, 0);
-	result &= (bytes_written == static_cast<DWORD>(bytes_streamed));
-
-	GlobalUnlock(mem);
-	CloseHandle(file);
-
-	stream->Release();
-	picture->Release();
-
-	return result;
-}
-
 bool screenCapturePart(int x, int y, int w, int h, LPCSTR fname)
 {
+	CString transitionString = fname;
+	LPCTSTR fnameW = transitionString;
+
 	HDC hdcSource = GetDC(NULL);
 	HDC hdcMemory = CreateCompatibleDC(hdcSource);
 
@@ -204,13 +150,16 @@ bool screenCapturePart(int x, int y, int w, int h, LPCSTR fname)
 
 	HPALETTE hpal = NULL;
 
-	if (saveBitmap(fname, hBitmap, hpal))
+	CImage image;
+	image.Attach(hBitmap);
+
+	if (SUCCEEDED(image.Save(fnameW)))
+	{
 		return true;
+	}
 
 	return false;
 }
-
-void SetCam();
 
 void SetScreenShot(task* tp)
 {
@@ -231,7 +180,6 @@ void SetScreenShot(task* tp)
 	case 0:
 		DisablePause();
 		DisableControl();
-		GameMode = destArray[count].gameMode;
 		EV_ClrFace(playertp[0]);
 		ForcePlayerAction(0, useSS ? 46 : 24);
 		playerpwp[0]->item |= Powerups_Invincibility;
@@ -299,6 +247,7 @@ void SetScreenShot(task* tp)
 void LoadLevelObject_r()
 {
 	LoadLevelObject_t.Original();
+	GameMode = destArray[count].gameMode;
 	CreateElementalTask(2, 2, SetScreenShot);
 }
 
@@ -338,7 +287,6 @@ void GenerateRandomLevelsLocation()
 			CurrentLevel = destArray[i].lvl;
 			CurrentAct = destArray[i].act;
 		}
-
 
 		if (CurrentCharacter >= Characters_Gamma)
 		{
