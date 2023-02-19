@@ -131,5 +131,11 @@ void SetPatches()
 	WriteData<1>((int*)0x4879B9, 0x1); //make amy always go boss victory pose
 	Casino_HandleSpawnPoints_t.Hook(Casino_HandleSpawnPoints_r);
 
+	for (uint8_t i = 5; i < 8; i++)
+	{
+		PhysicsArray[i] = PhysicsArray[Characters_Sonic];
+	}
+
+
 	SetPlayerInitialPosition_t.Hook(SetPlayerInitialPosition_r);
 }

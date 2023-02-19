@@ -61,6 +61,10 @@ void SetCharacterAnim()
 	if (!rng)
 	{
 		timerWait = 120;
+
+		if (!useSS)
+			ForcePlayerAction(0, 20);
+
 		switch (CurrentCharacter)
 		{
 		case Characters_Sonic:

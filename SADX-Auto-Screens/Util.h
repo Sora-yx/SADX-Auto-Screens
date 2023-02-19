@@ -16,6 +16,8 @@ void LookAt(NJS_VECTOR* unit, Angle* outx, Angle* outy);
 void LookAt(NJS_VECTOR* from, NJS_VECTOR* to, Angle* outx, Angle* outy);
 void PlayerLookAt(NJS_VECTOR* from, NJS_VECTOR* to, Angle* outx, Angle* outy);
 
+bool IsPathExist(const std::string& s);
+
 enum class CameraAdjustsIDs {
 	None,
 	Normal,

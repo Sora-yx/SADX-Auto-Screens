@@ -139,3 +139,9 @@ void PlayerLookAt(NJS_VECTOR* from, NJS_VECTOR* to, Angle* outx, Angle* outy) {
 		*outy = -(*outy) + 0x4000;
 	}
 }
+
+bool IsPathExist(const std::string& s)
+{
+	struct stat buffer;
+	return (stat(s.c_str(), &buffer) == 0);
+}
