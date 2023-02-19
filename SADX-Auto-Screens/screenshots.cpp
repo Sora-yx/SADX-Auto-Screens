@@ -165,6 +165,18 @@ bool screenCapturePart(int x, int y, int w, int h, LPCSTR fname)
 	return false;
 }
 
+Bool GetWindowPos(int* x, int* y) {
+	RECT window;
+	if (GetClientRect(WindowHandle, &window))
+	{
+		*x = window.left;
+		*y = window.top;
+		return TRUE;
+	}
+
+	return FALSE;
+}
+
 void SetScreenShot(task* tp)
 {
 	SetCam();
@@ -175,10 +187,11 @@ void SetScreenShot(task* tp)
 
 	auto twp = tp->twp;
 	std::string folder = modpath + "\\screenshots";
-	std::string path = folder + "\\" + std::to_string(count) + ".jpg";
-	int crop = IsWindowed ? 15 : 0;
+	std::string path = folder + "\\" + std::to_string(count) + ".png";
+	int crop = IsWindowed ? 12 : 0;
 	bool camDead = destArray[count].camPos.x == 0 && destArray[count].camPos.y == 0 && destArray[count].camPos.z == 0;
-
+	int posX = 0;
+	int posY = 0;
 	switch (twp->mode)
 	{
 	case 0:
@@ -204,18 +217,27 @@ void SetScreenShot(task* tp)
 		}
 		break;
 	case 2:
-		if (screenCapturePart(0, crop, HorizontalResolution, VerticalResolution - crop, path.c_str())) //take a screenshot
+		if (GetWindowPos(&posX, &posY))
 		{
-			if (sound)
+			if (screenCapturePart(posX, posY + crop, HorizontalResolution, VerticalResolution - crop, path.c_str())) //take a screenshot
 			{
-				PlayVoice(6875);
-			}
+				if (sound)
+				{
+					PlayVoice(6875);
+				}
 
-			twp->mode++;
+				twp->mode++;
+			}
+			else
+			{
+				PrintDebug("Failed to generate screenshot\n");
+				FreeTask(tp);
+				return;
+			}
 		}
 		else
 		{
-			PrintDebug("Failed to generate screenshot\n");
+			PrintDebug("Failed to generate screenshot\n couldn't get Window pos");
 			FreeTask(tp);
 			return;
 		}
